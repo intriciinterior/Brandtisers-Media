@@ -3,7 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 
-const DB_PATH = path.join(__dirname, '..', 'data', 'it_task_tracker.sqlite');
+const ORIGINAL_DB_PATH = path.join(__dirname, '..', 'data', 'it_task_tracker.sqlite');
+const DB_PATH = process.env.VERCEL
+  ? path.join('/tmp', 'it_task_tracker.sqlite')
+  : ORIGINAL_DB_PATH;
 
 let dbInstance = null;
 let SQL = null;
@@ -26,6 +29,15 @@ async function getDb() {
   const dbDir = path.dirname(DB_PATH);
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
+  }
+
+  // On Vercel, copy seed database to /tmp if it doesn't exist yet
+  if (process.env.VERCEL && !fs.existsSync(DB_PATH) && fs.existsSync(ORIGINAL_DB_PATH)) {
+    try {
+      fs.copyFileSync(ORIGINAL_DB_PATH, DB_PATH);
+    } catch (e) {
+      console.warn('Could not copy initial DB to /tmp:', e);
+    }
   }
 
   if (fs.existsSync(DB_PATH)) {
